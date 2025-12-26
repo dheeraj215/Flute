@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bansuri Studio: Complete Edition</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --accent-g: #e91e63; /* Pink for Guitar */
+            --accent-f: #27ae60; /* Green for Flute */
+            --accent-h: #f39c12; /* Orange for High */
+            --accent-l: #8e44ad; /* Purple for Low */
+            --accent-t: #2980b9; /* Blue for Top */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        h1 { text-align: center; margin: 0 0 5px 0; color: #2c3e50; }
+        p.sub { text-align: center; color: #666; margin: 0 0 30px 0; font-size: 0.9rem; }
+
+        .container { max-width: 950px; margin: 0 auto; padding-bottom: 80px; }
+
+        /* --- PANELS --- */
+        .panel {
+            background: #fff; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 30px; overflow: hidden;
+            border-top: 5px solid #555;
+        }
+        .panel.guitar { border-color: var(--accent-g); }
+        .panel.flute { border-color: var(--accent-f); }
+
+        .header {
+            background: #e9ecef; padding: 12px 20px; font-weight: 700;
+            display: flex; justify-content: space-between; align-items: center; color: #444;
+        }
+        .badge { background: #444; color: #fff; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem; }
+
+        /* --- GUITAR MATRIX --- */
+        .controls { padding: 15px; background: #333; text-align: center; color: #ccc; }
+        select { background: #555; color: #fff; border: 1px solid #777; padding: 8px; border-radius: 4px; font-size: 1rem; }
+
+        .g-grid {
+            display: grid; grid-template-columns: repeat(13, 1fr);
+            gap: 4px; padding: 10px; background: #222; overflow-x: auto;
+        }
+
+        .g-cell {
+            background: #444; color: #fff; padding: 12px 2px;
+            text-align: center; border-radius: 4px; border: 1px solid #555;
+            cursor: pointer; min-width: 50px; position: relative;
+            transition: transform 0.05s;
+        }
+        .g-cell.active {
+            background: var(--accent-g); border-color: #fff;
+            transform: translateY(2px); box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .g-note { font-weight: bold; font-size: 1.1rem; pointer-events: none; }
+        .g-swara { font-size: 0.7rem; opacity: 0.7; pointer-events: none; }
+        .kb-hint { font-size: 0.65rem; color: #aaa; margin-top: 4px; pointer-events: none; display: block; font-family: monospace; }
+        
+        .g-cell.active .kb-hint { color: #fff; }
+        /* Highlight Ma/Pa */
+        .g-cell[data-hl="ma"] .g-note { color: #ffd700; }
+        .g-cell[data-hl="pa"] .g-note { color: #2196f3; }
+
+        /* --- FLUTE LIST --- */
+        .f-container { padding: 10px 20px; }
+
+        .reg-head {
+            padding: 8px 12px; font-weight: bold; border-radius: 4px;
+            margin: 25px 0 10px 0; color: #333; background: #eee;
+            border-left: 5px solid #999; display: flex; justify-content: space-between;
+        }
+        .reg-head.high { background: #fff3e0; border-color: var(--accent-h); }
+        .reg-head.mid { background: #e8f5e9; border-color: var(--accent-f); }
+        .reg-head.low { background: #f3e5f5; border-color: var(--accent-l); }
+        .reg-head.top { background: #e3f2fd; border-color: var(--accent-t); }
+
+        .f-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; border-bottom: 1px dashed #ddd;
+            cursor: pointer; border-radius: 6px; transition: background 0.05s;
+        }
+        .f-row:hover { background: #f9f9f9; }
+        .f-row.active {
+            background: var(--accent-f); color: white;
+            transform: scale(1.01); border: 1px solid #1e8449;
+        }
+        .f-row.active .note-name, .f-row.active .note-key { color: white; border-color: white; }
+
+        .note-meta { width: 70px; pointer-events: none; }
+        .note-name { font-weight: bold; font-size: 1.1rem; }
+        .note-key { font-size: 0.7rem; color: #888; border: 1px solid #ccc; border-radius: 3px; padding: 0 4px; margin-top: 2px; display: inline-block; }
+
+        /* FLUTE VISUALS */
+        .flute-vis {
+            flex-grow: 1; height: 28px; margin-left: 10px;
+            background: linear-gradient(to bottom, #f3e5ab, #d4b483);
+            border-radius: 14px; border: 1px solid #c0a060;
+            position: relative; display: flex; align-items: center; pointer-events: none;
+        }
+        .cap { width: 12px; height: 100%; background: #111; border-radius: 14px 0 0 14px; position:absolute; left:0; }
+        .blow { width: 14px; height: 14px; background: #333; border-radius: 50%; margin-left: 20px; }
+        .holes { display: flex; gap: 5px; margin-left: auto; padding-right: 10px; align-items: center; }
+        .hole { width: 18px; height: 18px; border-radius: 50%; border: 1px solid #333; background: #fff; }
+        .hole.closed { background: #111; }
+        .hole.half { background: linear-gradient(90deg, #111 50%, #fff 50%); }
+        .sep { width: 1px; height: 20px; background: rgba(0,0,0,0.2); margin: 0 2px; }
+        .hole.pinky { width: 14px; height: 14px; border-color: #5d4037; }
+
+        @media (max-width: 600px) {
+            .g-grid { padding-bottom: 15px; }
+            .hole { width: 14px; height: 14px; }
+            .hole.pinky { width: 12px; height: 12px; }
+            .note-key, .kb-hint { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Bansuri Studio</h1>
+    <p class="sub">Hold Key/Click to Play • Release to Stop • Full Keyboard Control</p>
+
+    <div class="container">
+
+        <div class="panel guitar">
+            <div class="header">
+                <span>Guitar Matrix</span>
+                <span class="badge">Keys: 1 to =</span>
+            </div>
+            <div class="controls">
+                <label>Capo / Key: </label>
+                <select id="capoSelect" onchange="renderUI()">
+                    <option value="0">0 (G)</option><option value="1">1 (G#)</option>
+                    <option value="2">2 (A)</option><option value="3">3 (A#)</option>
+                    <option value="4">4 (B)</option><option value="5">5 (C)</option>
+                    <option value="6">6 (C#)</option><option value="7">7 (D)</option>
+                    <option value="8">8 (D#)</option><option value="9">9 (E)</option>
+                    <option value="10">10 (F)</option><option value="11">11 (F#)</option>
+                    <option value="12">12 (G)</option>
+                </select>
+            </div>
+            <div id="guitarGrid" class="g-grid"></div>
+        </div>
+
+        <div class="panel flute">
+            <div class="header">
+                <span>Flute Fingering</span>
+                <span class="badge">Keys: Q-], A-Ent, Z-N, Sh+1-3</span>
+            </div>
+            <div id="fluteContainer" class="f-container"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // === AUDIO ENGINE ===
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = new AudioContext();
+        const BASE_FREQ = 392.00; // G4
+
+        // Active Notes Map: { id: { gain, oscs[] } }
+        const activeNotes = {};
+
+        // === DATA ===
+        const swaras = ["Sa", "re", "Re", "ga", "Ga", "Ma", "Ma#", "Pa", "dha", "Dha", "ni", "Ni", "Sa'"];
+        
+        // --- KEYS CONFIGURATION ---
+        // Guitar: 1 to = (Backspace for 13th)
+        const kGuitar = ['Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal','Backspace'];
+        const lGuitar = ['1','2','3','4','5','6','7','8','9','0','-','=','Bksp'];
+
+        // Flute High (Tivra): Q to ]
+        const kHigh = ['KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight'];
+        const lHigh = ['Q','W','E','R','T','Y','U','I','O','P','[',']'];
+
+        // Flute Mid (Madhya): A to Enter
+        const kMid = ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote','Enter'];
+        const lMid = ['A','S','D','F','G','H','J','K','L',';',"'","Ent"];
+
+        // Flute Low (Mandra): Z to N (Reverse order logic handled in loop)
+        const kLow = ['KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN'];
+        const lLow = ['Z','X','C','V','B','N'];
+
+        // Flute Top (Atitar): Shift + 1,2,3
+        const kTop = ['Digit1','Digit2','Digit3'];
+        const lTop = ['Sh+1','Sh+2','Sh+3'];
+
+        // === AUDIO FUNCTIONS ===
+
+        function resumeAudio() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(id, freq, type) {
+            if (activeNotes[id]) return; // Polyphony check: don't restart same note
+            resumeAudio();
+
+            const t = audioCtx.currentTime;
+            const master = audioCtx.createGain();
+            master.connect(audioCtx.destination);
+            
+            // Attack
+            master.gain.setValueAtTime(0, t);
+            master.gain.linearRampToValueAtTime(0.5, t + 0.05);
+
+            const oscs = [];
+
+            if (type === 'guitar') {
+                // Guitar: 3 detuned sawtooths for fullness (Chord-like)
+                [1, 1.001, 1.4983].forEach((r, i) => { 
+                    const osc = audioCtx.createOscillator();
+                    osc.type = 'sawtooth';
+                    osc.frequency.value = freq * r; // Root & 5th
+                    const f = audioCtx.createBiquadFilter();
+                    f.type = 'lowpass'; f.frequency.value = freq * 3;
+                    osc.connect(f); f.connect(master);
+                    osc.start(t + (i*0.02)); 
+                    oscs.push(osc);
+                });
+                // Decay while holding
+                master.gain.exponentialRampToValueAtTime(0.2, t + 0.8);
+            } 
+            else {
+                // Flute: Sine + Tri
+                const o1 = audioCtx.createOscillator(); o1.type = 'sine'; o1.frequency.value = freq;
+                const o2 = audioCtx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = freq;
+                
+                const g1 = audioCtx.createGain(); g1.gain.value = 0.8;
+                const g2 = audioCtx.createGain(); g2.gain.value = 0.15;
+                
+                o1.connect(g1); g1.connect(master);
+                o2.connect(g2); g2.connect(master);
+                
+                o1.start(t); o2.start(t);
+                oscs.push(o1, o2);
+            }
+
+            activeNotes[id] = { master, oscs };
+            
+            // GUI Update
+            const el = document.getElementById(id);
+            if(el) el.classList.add('active');
+        }
+
+        function stopSound(id) {
+            if (!activeNotes[id]) return;
+            
+            const v = activeNotes[id];
+            const t = audioCtx.currentTime;
+
+            // Immediate Release
+            v.master.gain.cancelScheduledValues(t);
+            v.master.gain.setValueAtTime(v.master.gain.value, t);
+            v.master.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+
+            v.oscs.forEach(o => o.stop(t + 0.06));
+            delete activeNotes[id];
+
+            // GUI Update
+            const el = document.getElementById(id);
+            if(el) el.classList.remove('active');
+        }
+
+        // Global Stop
+        function stopAll() {
+            Object.keys(activeNotes).forEach(id => stopSound(id));
+        }
+
+        // === EVENTS BINDER ===
+        function bindEvents(el, id, getFreq, type) {
+            const start = (e) => {
+                if(e.type === 'mousedown' && e.button !== 0) return; // Only left click
+                e.preventDefault();
+                playSound(id, getFreq(), type);
+            };
+            const stop = (e) => {
+                e.preventDefault();
+                stopSound(id);
+            };
+
+            el.addEventListener('mousedown', start);
+            el.addEventListener('touchstart', start);
+            
+            el.addEventListener('mouseup', stop);
+            el.addEventListener('touchend', stop);
+            el.addEventListener('mouseleave', stop); // Slide off fix
+            el.addEventListener('touchcancel', stop);
+        }
+
+        // === RENDERERS ===
+        function getNoteName(idx) {
+            const scale = ["G","G#","A","A#","B","C","C#","D","D#","E","F","F#"];
+            return scale[idx % 12];
+        }
+
+        function renderGuitar() {
+            const grid = document.getElementById('guitarGrid');
+            grid.innerHTML = '';
+            const capo = parseInt(document.getElementById('capoSelect').value);
+
+            swaras.forEach((s, i) => {
+                const id = `g_${i}`;
+                const div = document.createElement('div');
+                div.className = 'g-cell';
+                div.id = id;
+                if(i===5||i===6) div.setAttribute('data-hl','ma');
+                if(i===7) div.setAttribute('data-hl','pa');
+
+                div.innerHTML = `
+                    <div class="g-swara">${s}</div>
+                    <div class="g-note">${getNoteName(capo+i)}</div>
+                    <div class="kb-hint">[${lGuitar[i]}]</div>
+                `;
+
+                const getFreq = () => BASE_FREQ * Math.pow(2, (capo+i)/12);
+                bindEvents(div, id, getFreq, 'guitar');
+                grid.appendChild(div);
+            });
+        }
+
+        function renderFlute() {
+            const container = document.getElementById('fluteContainer');
+            container.innerHTML = '';
+            const capo = () => parseInt(document.getElementById('capoSelect').value);
+
+            // Registers Config
+            const regs = [
+                { name: "Top Register (Atitar)", cls: "top", keys: kTop, labels: lTop, start: 0, offset: 24, count: 3, 
+                  holes: [[0,0,0,2,2,2,2], [0,0,1,2,2,2,2], [0,0,2,2,2,2,2]] },
+                
+                { name: "High Register (Tivra)", cls: "high", keys: kHigh, labels: lHigh, start: 0, offset: 12, count: 12,
+                  holes: [
+                    [0,0,0,2,2,2,2], [0,0,1,2,2,2,2], [0,0,2,2,2,2,2], [0,1,2,2,2,2,2], 
+                    [0,2,2,2,2,2,2], [1,2,2,2,2,2,2], [2,2,2,2,2,2,2], [0,0,0,0,0,0,2], 
+                    [0,0,0,0,0,1,2], [0,0,0,0,0,2,2], [0,0,0,0,1,2,2], [0,0,0,0,2,2,2]
+                  ] },
+                
+                { name: "Middle Register (Madhya)", cls: "mid", keys: kMid, labels: lMid, start: 0, offset: 0, count: 12,
+                  holes: [ /* Same as high, different keys */
+                    [0,0,0,2,2,2,2], [0,0,1,2,2,2,2], [0,0,2,2,2,2,2], [0,1,2,2,2,2,2], 
+                    [0,2,2,2,2,2,2], [1,2,2,2,2,2,2], [2,2,2,2,2,2,2], [0,0,0,0,0,0,2], 
+                    [0,0,0,0,0,1,2], [0,0,0,0,0,2,2], [0,0,0,0,1,2,2], [0,0,0,0,2,2,2]
+                  ] },
+                
+                { name: "Lowest Register (Mandra)", cls: "low", keys: kLow, labels: lLow, start: 11, offset: -1, count: 6, reverse: true,
+                  holes: [
+                    [0,0,0,0,2,2,2], [0,0,0,0,1,2,2], [0,0,0,0,0,2,2], // Ni, ni, Dha
+                    [0,0,0,0,0,1,2], [0,0,0,0,0,0,2], [0,0,0,0,0,0,0]  // dha, Pa, Ma
+                  ] }
+            ];
+
+            regs.forEach((r, rIdx) => {
+                const h = document.createElement('div');
+                h.className = `reg-head ${r.cls}`;
+                h.innerHTML = `<span>${r.name}</span>`;
+                container.appendChild(h);
+
+                for(let i=0; i<r.count; i++) {
+                    const sIdx = r.reverse ? (r.start - i) : (r.start + i);
+                    const semi = r.reverse ? (r.offset - i) : (r.offset + i);
+                    const id = `f_${rIdx}_${i}`;
+                    
+                    const row = document.createElement('div');
+                    row.className = 'f-row';
+                    row.id = id;
+
+                    // Hole gen
+                    let hHtml = '';
+                    const pat = r.holes[i];
+                    for(let x=0; x<6; x++) {
+                        let c = pat[x]===0?'closed':(pat[x]===1?'half':'open');
+                        hHtml += `<div class="hole ${c}"></div>`;
+                    }
+                    let p = pat[6]===0?'closed':'open';
+                    hHtml += `<div class="sep"></div><div class="hole pinky ${p}"></div>`;
+
+                    row.innerHTML = `
+                        <div class="note-meta">
+                            <div class="note-name">${swaras[sIdx]}</div>
+                            <div class="note-key">[${r.labels[i]}]</div>
+                        </div>
+                        <div class="flute-vis">
+                            <div class="cap"></div><div class="blow"></div>
+                            <div class="holes">${hHtml}</div>
+                        </div>
+                    `;
+
+                    const getFreq = () => BASE_FREQ * Math.pow(2, (capo() + semi)/12);
+                    bindEvents(row, id, getFreq, 'flute');
+                    container.appendChild(row);
+                }
+            });
+        }
+
+        function renderUI() {
+            renderGuitar();
+            renderFlute();
+        }
+
+        // === KEYBOARD LISTENERS ===
+        
+        function handleKey(e, isDown) {
+            if(e.repeat) return;
+            
+            const code = e.code;
+            const shift = e.shiftKey;
+            let id = null;
+            let freq = 0;
+            let type = 'flute';
+            const cap = parseInt(document.getElementById('capoSelect').value);
+
+            // 1. TOP REGISTER (Shift + 1/2/3)
+            // Note: pressing shift+1 might trigger Digit1 code but with shiftKey true
+            if (shift && kTop.includes(code)) {
+                e.preventDefault(); // Prevent text selection
+                const idx = kTop.indexOf(code);
+                id = `f_0_${idx}`;
+                freq = BASE_FREQ * Math.pow(2, (cap + 24 + idx)/12);
+                type = 'flute';
+            }
+            // 2. GUITAR (1 to =) - Only if Shift is NOT pressed
+            else if (!shift && kGuitar.includes(code)) {
+                const idx = kGuitar.indexOf(code);
+                id = `g_${idx}`;
+                freq = BASE_FREQ * Math.pow(2, (cap + idx)/12);
+                type = 'guitar';
+            }
+            // 3. FLUTE HIGH (Q to ])
+            else if (kHigh.includes(code)) {
+                const idx = kHigh.indexOf(code);
+                id = `f_1_${idx}`;
+                freq = BASE_FREQ * Math.pow(2, (cap + 12 + idx)/12);
+            }
+            // 4. FLUTE MID (A to Enter)
+            else if (kMid.includes(code)) {
+                const idx = kMid.indexOf(code);
+                id = `f_2_${idx}`;
+                freq = BASE_FREQ * Math.pow(2, (cap + idx)/12);
+            }
+            // 5. FLUTE LOW (Z to N)
+            else if (kLow.includes(code)) {
+                const idx = kLow.indexOf(code);
+                id = `f_3_${idx}`;
+                // Low register logic: -1 down to -6
+                freq = BASE_FREQ * Math.pow(2, (cap - 1 - idx)/12);
+            }
+
+            if (id) {
+                if (isDown) playSound(id, freq, type);
+                else stopSound(id);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => handleKey(e, true));
+        window.addEventListener('keyup', (e) => handleKey(e, false));
+        
+        // Safety: Stop all on window release (catches dragged-off clicks)
+        window.addEventListener('mouseup', stopAll);
+        window.addEventListener('touchend', stopAll);
+
+        // Init
+        renderUI();
+
+    </script>
+</body>
+</html>
